@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>오늘의 사진 일기</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1 id="appTitle">📷 오늘의 사진 일기</h1>
+  </header>
+
+  <main>
+    <section class="new-entry" id="newEntry">
+      <div class="field">
+        <!--label for="entryDate">날짜</label-->
+        <div class="date-row">
+          <span id="entryDateText" class="date-text"></span>
+          <button type="button" id="changeDateBtn" class="date-change-btn"> 변경</button>
+        </div>
+        <input type="date" id="entryDate" class="date-input-hidden" />
+      </div>
+
+      <div class="field">
+        <!--label for="entryText">오늘 하루는 어땠나요?</label-->
+        <div class="textarea-wrap">
+          <textarea id="entryText" rows="4" placeholder="나의 오늘을 기록해요~"></textarea>
+          <button type="button" id="voiceBtn" class="voice-mic-btn" aria-label="음성으로 기록하기" title="음성으로 기록하기">🎙️</button>
+        </div>
+        <div class="voice-preview hidden" id="voicePreviewWrap">
+          <audio id="voicePreviewAudio" controls></audio>
+          <button type="button" id="removeVoiceBtn" class="remove-voice-btn" aria-label="음성 삭제">✕</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="photoInput" class="photo-label">
+          <span id="photoLabelText">📎 사진 추가</span>
+        </label>
+        <input type="file" id="photoInput" accept="image/*" multiple />
+        <div class="photo-preview" id="photoPreview"></div>
+      </div>
+
+      <button id="saveBtn" class="save-btn">저장하기</button>
+    </section>
+
+    <section class="entry-list-section">
+      <h2>지난 기록</h2>
+      <div id="entryList" class="entry-list"></div>
+      <p id="emptyMsg" class="empty-msg">아직 기록이 없어요. 첫 일기를 남겨보세요!</p>
+    </section>
+  </main>
+
+  <div id="detailModal" class="modal hidden">
+    <div class="modal-content">
+      <button id="closeModal" class="close-btn">&times;</button>
+      <div id="modalBody"></div>
+      <button id="deleteBtn" class="delete-btn">삭제</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
