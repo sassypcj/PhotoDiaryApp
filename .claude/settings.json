@@ -5,7 +5,20 @@
       "Skill(run:*)",
       "Bash(python -m http.server 8791)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8791/index.html)",
-      "Bash(curl -s http://localhost:8791/app.js)"
+      "Bash(curl -s http://localhost:8791/app.js)",
+      "Bash(cd \"c:\\\\workspace\\\\PhotoDiaryApp\" && git remote -v && git rev-parse --show-toplevel && ls -la ..)",
+      "Read(//c/workspace/**)",
+      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Read(//c/workspace/.github/**)",
+      "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8791/index.html)",
+      "Bash(curl -s -o /dev/null -w \"manifest.json: %{http_code}\\\\n\" http://localhost:8791/manifest.json)",
+      "Bash(curl -s -o /dev/null -w \"sw.js: %{http_code}\\\\n\" http://localhost:8791/sw.js)",
+      "Bash(curl -s -o /dev/null -w \"icon-192.png: %{http_code}\\\\n\" http://localhost:8791/icon-192.png)",
+      "Bash(curl -s -o /dev/null -w \"apple-touch-icon.png: %{http_code}\\\\n\" http://localhost:8791/apple-touch-icon.png)",
+      "Bash(node \"C:\\\\Users\\\\stella\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--workspace-PhotoDiaryApp\\\\40db67eb-fb21-4837-b60c-8d0d8c2c3311\\\\scratchpad\\\\serve.js\" \"c:\\\\workspace\\\\PhotoDiaryApp\" 8792)"
+    ],
+    "additionalDirectories": [
+      "c:\\workspace\\.github\\workflows"
     ]
   }
 }
