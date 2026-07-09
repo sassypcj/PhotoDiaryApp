@@ -518,12 +518,21 @@ input[type="file"] {
   object-fit: cover;
 }
 
-.cal-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-top: 12px;
+.cal-count {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--accent-dark);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  z-index: 1;
 }
 
 .day-list {

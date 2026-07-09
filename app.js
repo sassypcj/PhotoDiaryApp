@@ -628,10 +628,11 @@ async function renderCalendar() {
       "cal-cell" + (dayEntries.length ? " has-entry" : "") + (dateKey === todayKey ? " today" : "");
 
     const withPhoto = dayEntries.find((entry) => entry.photos && entry.photos.length > 0);
+    const countBadge = dayEntries.length ? `<span class="cal-count">${dayEntries.length}</span>` : "";
     if (withPhoto) {
-      cell.innerHTML = `<span class="cal-day-num">${day}</span><img class="cal-thumb" src="${withPhoto.photos[0]}" />`;
+      cell.innerHTML = `<span class="cal-day-num">${day}</span><img class="cal-thumb" src="${withPhoto.photos[0]}" />${countBadge}`;
     } else {
-      cell.innerHTML = `<span class="cal-day-num">${day}</span>${dayEntries.length ? '<span class="cal-dot"></span>' : ""}`;
+      cell.innerHTML = `<span class="cal-day-num">${day}</span>${countBadge}`;
     }
 
     if (dayEntries.length > 0) {
