@@ -581,7 +581,20 @@ input[type="file"] {
 .entry-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+}
+
+.date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-group-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding-left: 2px;
 }
 
 .entry-card {
@@ -615,7 +628,7 @@ input[type="file"] {
   min-width: 0;
 }
 
-.entry-card .date {
+.entry-card .time {
   font-size: 0.8rem;
   color: var(--muted);
   margin-bottom: 4px;

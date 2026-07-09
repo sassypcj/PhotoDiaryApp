@@ -323,6 +323,10 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
 }
 
+function formatTime(id) {
+  return new Date(id).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+}
+
 function updateDateDisplay() {
   const input = document.getElementById("entryDate");
   document.getElementById("entryDateText").textContent = formatDate(input.value);
@@ -565,26 +569,40 @@ async function renderEntryList() {
   }
   emptyMsg.style.display = "none";
 
-  entries.forEach((entry) => {
-    const card = document.createElement("div");
-    card.className = "entry-card";
+  const byDate = groupEntriesByDate(entries);
 
-    let thumbHtml;
-    if (entry.photos && entry.photos.length > 0) {
-      thumbHtml = `<img class="thumb" src="${entry.photos[0]}" />`;
-    } else {
-      thumbHtml = `<div class="thumb placeholder">📝</div>`;
-    }
+  byDate.forEach((dayEntries, date) => {
+    const group = document.createElement("div");
+    group.className = "date-group";
 
-    card.innerHTML = `
-      ${thumbHtml}
-      <div class="info">
-        <div class="date">${formatDate(entry.date)}</div>
-        <div class="snippet">${escapeHtml(entry.text || "(내용 없음)")}</div>
-      </div>
-    `;
-    card.addEventListener("click", () => openDetail(entry));
-    list.appendChild(card);
+    const header = document.createElement("div");
+    header.className = "date-group-header";
+    header.textContent = formatDate(date);
+    group.appendChild(header);
+
+    dayEntries.forEach((entry) => {
+      const card = document.createElement("div");
+      card.className = "entry-card";
+
+      let thumbHtml;
+      if (entry.photos && entry.photos.length > 0) {
+        thumbHtml = `<img class="thumb" src="${entry.photos[0]}" />`;
+      } else {
+        thumbHtml = `<div class="thumb placeholder">📝</div>`;
+      }
+
+      card.innerHTML = `
+        ${thumbHtml}
+        <div class="info">
+          <div class="time">${formatTime(entry.id)}</div>
+          <div class="snippet">${escapeHtml(entry.text || "(내용 없음)")}</div>
+        </div>
+      `;
+      card.addEventListener("click", () => openDetail(entry));
+      group.appendChild(card);
+    });
+
+    list.appendChild(group);
   });
 }
 
