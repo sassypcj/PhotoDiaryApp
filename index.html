@@ -19,6 +19,7 @@
     <div class="header-actions">
       <button type="button" id="backupBtn" class="header-btn" title="전체 백업">💾 백업</button>
       <button type="button" id="restoreBtn" class="header-btn" title="백업 파일 복원">📥 복원</button>
+      <button type="button" id="lockManageBtn" class="header-btn" title="잠금 설정">🔒 잠금 설정</button>
       <input type="file" id="restoreInput" accept="application/json" class="hidden-file-input" />
     </div>
   </header>
@@ -93,6 +94,31 @@
       <div class="modal-actions" id="modalActions">
         <button id="shareBtn" class="share-btn">📤 공유하기</button>
         <button id="deleteBtn" class="delete-btn">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lockScreen" class="lock-screen hidden">
+    <div class="lock-screen-content">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-title" id="lockTitle">패턴을 그려주세요</div>
+      <p class="lock-msg" id="lockMsg"></p>
+      <div class="lock-grid" id="lockGrid" touch-action="none">
+        <svg class="lock-lines" id="lockLines"></svg>
+        <div class="lock-dot" data-idx="0"></div>
+        <div class="lock-dot" data-idx="1"></div>
+        <div class="lock-dot" data-idx="2"></div>
+        <div class="lock-dot" data-idx="3"></div>
+        <div class="lock-dot" data-idx="4"></div>
+        <div class="lock-dot" data-idx="5"></div>
+        <div class="lock-dot" data-idx="6"></div>
+        <div class="lock-dot" data-idx="7"></div>
+        <div class="lock-dot" data-idx="8"></div>
+      </div>
+      <button type="button" id="lockForgotBtn" class="lock-forgot-btn hidden">패턴을 잊으셨나요?</button>
+      <div class="lock-manage-links hidden" id="lockManageLinks">
+        <button type="button" id="lockChangeLink" class="lock-link">패턴 변경</button>
+        <button type="button" id="lockDisableLink" class="lock-link">잠금 끄기</button>
       </div>
     </div>
   </div>

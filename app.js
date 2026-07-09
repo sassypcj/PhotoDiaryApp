@@ -8,6 +8,197 @@ let selectedPhotos = []; // array of dataURL strings for the entry being compose
 let viewMode = "list"; // "list" | "calendar"
 let calendarCursor = new Date();
 
+// ---- Pattern lock ----
+
+const LOCK_HASH_KEY = "photoDiaryLockHash";
+const LOCK_MIN_DOTS = 4;
+
+let lockMode = "unlock"; // "unlock" | "setup-first" | "setup-confirm" | "verify-for-change" | "verify-for-disable"
+let pendingPattern = null;
+let dotCenters = [];
+let currentPattern = [];
+let isDrawingPattern = false;
+
+function getLockHash() {
+  return localStorage.getItem(LOCK_HASH_KEY);
+}
+
+function setLockHash(hash) {
+  localStorage.setItem(LOCK_HASH_KEY, hash);
+}
+
+function clearLockHash() {
+  localStorage.removeItem(LOCK_HASH_KEY);
+}
+
+async function hashPattern(patternArr) {
+  const data = new TextEncoder().encode(patternArr.join("-"));
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function updateLockButtonLabel() {
+  const btn = document.getElementById("lockManageBtn");
+  btn.textContent = getLockHash() ? "🔒 잠금 관리" : "🔒 잠금 설정";
+}
+
+function showLockMsg(text, isError) {
+  const msg = document.getElementById("lockMsg");
+  msg.textContent = text;
+  msg.classList.toggle("error", !!isError);
+}
+
+function getDotCenters() {
+  const dots = document.querySelectorAll("#lockGrid .lock-dot");
+  const gridRect = document.getElementById("lockGrid").getBoundingClientRect();
+  return Array.from(dots).map((dot) => {
+    const r = dot.getBoundingClientRect();
+    return {
+      x: r.left + r.width / 2 - gridRect.left,
+      y: r.top + r.height / 2 - gridRect.top,
+    };
+  });
+}
+
+function makeLockLine(a, b) {
+  const ns = "http://www.w3.org/2000/svg";
+  const line = document.createElementNS(ns, "line");
+  line.setAttribute("x1", a.x);
+  line.setAttribute("y1", a.y);
+  line.setAttribute("x2", b.x);
+  line.setAttribute("y2", b.y);
+  line.setAttribute("class", "lock-line-seg");
+  return line;
+}
+
+function renderLockLines(pointerPos) {
+  const svg = document.getElementById("lockLines");
+  svg.innerHTML = "";
+  for (let i = 0; i < currentPattern.length - 1; i++) {
+    svg.appendChild(makeLockLine(dotCenters[currentPattern[i]], dotCenters[currentPattern[i + 1]]));
+  }
+  if (pointerPos && currentPattern.length > 0) {
+    svg.appendChild(makeLockLine(dotCenters[currentPattern[currentPattern.length - 1]], pointerPos));
+  }
+}
+
+function clearLockDrawing() {
+  currentPattern = [];
+  document.querySelectorAll("#lockGrid .lock-dot.active").forEach((dot) => dot.classList.remove("active"));
+  document.getElementById("lockLines").innerHTML = "";
+}
+
+function arraysEqual(a, b) {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+function handleLockPointerMove(e) {
+  const gridRect = document.getElementById("lockGrid").getBoundingClientRect();
+  const pos = { x: e.clientX - gridRect.left, y: e.clientY - gridRect.top };
+  dotCenters.forEach((c, idx) => {
+    if (currentPattern.includes(idx)) return;
+    const dist = Math.hypot(c.x - pos.x, c.y - pos.y);
+    if (dist < 26) {
+      currentPattern.push(idx);
+      document.querySelector(`#lockGrid .lock-dot[data-idx="${idx}"]`).classList.add("active");
+    }
+  });
+  renderLockLines(pos);
+}
+
+async function finalizeLockPattern() {
+  const pattern = currentPattern.slice();
+  clearLockDrawing();
+
+  if (pattern.length < LOCK_MIN_DOTS) {
+    showLockMsg(`${LOCK_MIN_DOTS}개 이상의 점을 연결해주세요`, true);
+    return;
+  }
+
+  if (lockMode === "unlock") {
+    const hash = await hashPattern(pattern);
+    if (hash === getLockHash()) {
+      hideLockScreen();
+      onUnlockSuccess();
+    } else {
+      showLockMsg("패턴이 일치하지 않아요. 다시 시도해주세요.", true);
+    }
+  } else if (lockMode === "setup-first") {
+    pendingPattern = pattern;
+    lockMode = "setup-confirm";
+    showLockMsg("확인을 위해 한 번 더 그려주세요");
+  } else if (lockMode === "setup-confirm") {
+    if (arraysEqual(pattern, pendingPattern)) {
+      setLockHash(await hashPattern(pattern));
+      pendingPattern = null;
+      hideLockScreen();
+      updateLockButtonLabel();
+      alert("패턴 잠금이 설정됐어요.");
+    } else {
+      showLockMsg("패턴이 일치하지 않아요. 처음부터 다시 그려주세요.", true);
+      lockMode = "setup-first";
+      pendingPattern = null;
+    }
+  } else if (lockMode === "verify-for-change") {
+    const hash = await hashPattern(pattern);
+    if (hash === getLockHash()) {
+      lockMode = "setup-first";
+      document.getElementById("lockManageLinks").classList.add("hidden");
+      document.getElementById("lockForgotBtn").classList.add("hidden");
+      document.getElementById("lockTitle").textContent = "새 패턴을 그려주세요";
+      showLockMsg("");
+    } else {
+      showLockMsg("패턴이 일치하지 않아요.", true);
+    }
+  } else if (lockMode === "verify-for-disable") {
+    const hash = await hashPattern(pattern);
+    if (hash === getLockHash()) {
+      clearLockHash();
+      hideLockScreen();
+      updateLockButtonLabel();
+      alert("패턴 잠금을 껐어요.");
+    } else {
+      showLockMsg("패턴이 일치하지 않아요.", true);
+    }
+  }
+}
+
+function openLockScreen(mode) {
+  lockMode = mode;
+  pendingPattern = null;
+  clearLockDrawing();
+  showLockMsg("");
+
+  const isUnlock = mode === "unlock";
+  const isManageVerify = mode === "verify-for-change" || mode === "verify-for-disable";
+  document.getElementById("lockForgotBtn").classList.toggle("hidden", !isUnlock);
+  document.getElementById("lockManageLinks").classList.toggle("hidden", !isManageVerify);
+
+  const titles = {
+    unlock: "패턴을 그려주세요",
+    "setup-first": "새로 사용할 패턴을 그려주세요",
+    "setup-confirm": "확인을 위해 한 번 더 그려주세요",
+    "verify-for-change": "현재 패턴을 먼저 그려주세요",
+    "verify-for-disable": "현재 패턴을 먼저 그려주세요",
+  };
+  document.getElementById("lockTitle").textContent = titles[mode] || "패턴을 그려주세요";
+
+  const screen = document.getElementById("lockScreen");
+  screen.classList.remove("hidden");
+
+  dotCenters = getDotCenters();
+}
+
+function hideLockScreen() {
+  document.getElementById("lockScreen").classList.add("hidden");
+}
+
+function onUnlockSuccess() {
+  refreshViews();
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
@@ -610,7 +801,13 @@ async function init() {
   db = await openDB();
   document.getElementById("entryDate").value = todayStr();
   updateDateDisplay();
-  refreshViews();
+  updateLockButtonLabel();
+
+  if (getLockHash()) {
+    openLockScreen("unlock");
+  } else {
+    refreshViews();
+  }
 
   document.getElementById("entryDate").addEventListener("change", updateDateDisplay);
 
@@ -707,6 +904,54 @@ async function init() {
     const file = e.target.files[0];
     if (file) await restoreFromFile(file);
     e.target.value = "";
+  });
+
+  document.getElementById("lockManageBtn").addEventListener("click", () => {
+    if (getLockHash()) {
+      openLockScreen("verify-for-change");
+    } else {
+      openLockScreen("setup-first");
+    }
+  });
+
+  document.getElementById("lockChangeLink").addEventListener("click", () => {
+    lockMode = "verify-for-change";
+    document.getElementById("lockTitle").textContent = "현재 패턴을 그려 확인해주세요 (변경)";
+    showLockMsg("");
+  });
+
+  document.getElementById("lockDisableLink").addEventListener("click", () => {
+    lockMode = "verify-for-disable";
+    document.getElementById("lockTitle").textContent = "현재 패턴을 그려 확인해주세요 (끄기)";
+    showLockMsg("");
+  });
+
+  document.getElementById("lockForgotBtn").addEventListener("click", () => {
+    if (confirm("패턴을 초기화할까요? 일기 데이터는 그대로 남아있고, 잠금만 새로 설정하면 돼요.")) {
+      clearLockHash();
+      hideLockScreen();
+      updateLockButtonLabel();
+      onUnlockSuccess();
+      alert("잠금이 초기화됐어요. 원하시면 다시 설정해주세요.");
+    }
+  });
+
+  const lockGrid = document.getElementById("lockGrid");
+  lockGrid.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    dotCenters = getDotCenters();
+    currentPattern = [];
+    isDrawingPattern = true;
+    handleLockPointerMove(e);
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!isDrawingPattern) return;
+    handleLockPointerMove(e);
+  });
+  document.addEventListener("pointerup", () => {
+    if (!isDrawingPattern) return;
+    isDrawingPattern = false;
+    finalizeLockPattern();
   });
 }
 
