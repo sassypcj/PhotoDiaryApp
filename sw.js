@@ -1,4 +1,4 @@
-const CACHE_NAME = "photo-diary-v3";
+const CACHE_NAME = "photo-diary-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
+  "./vendor/transformers.min.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -27,6 +28,10 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Only manage same-origin app-shell requests. Cross-origin requests (the
+  // Whisper model from huggingface.co, the ONNX runtime wasm from jsdelivr)
+  // are left to the browser's normal fetch + transformers.js's own cache.
+  if (new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request)

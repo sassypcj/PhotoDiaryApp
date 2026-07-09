@@ -363,10 +363,88 @@ function renderPreview() {
 let mediaRecorder = null;
 let mediaStream = null;
 let audioChunks = [];
-let recognition = null;
 let isRecording = false;
 let voiceDataUrl = null;
 let voiceTranscriptDraft = "";
+let transcribePromise = null;
+
+// ---- On-device speech-to-text (Whisper, via transformers.js) ----
+// Runs fully on the phone after recording stops - no audio ever leaves the
+// device. First use downloads the model (~70MB) and caches it for offline use.
+
+const ASR_MODEL = "Xenova/whisper-base";
+let asrPipelinePromise = null;
+
+function getAsrPipeline(onProgress) {
+  if (!asrPipelinePromise) {
+    asrPipelinePromise = import("./vendor/transformers.min.js").then(({ pipeline }) =>
+      pipeline("automatic-speech-recognition", ASR_MODEL, {
+        quantized: true,
+        progress_callback: onProgress,
+      })
+    );
+  }
+  return asrPipelinePromise;
+}
+
+function setTranscribeStatus(text, isError) {
+  const el = document.getElementById("voiceTranscriptPreview");
+  el.textContent = text;
+  el.classList.toggle("error", !!isError);
+  el.classList.toggle("hidden", !text);
+}
+
+// Whisper (especially the small quantized models) can fall into a
+// "hallucination loop" on unclear/quiet audio, repeating the same short
+// phrase dozens of times instead of failing cleanly. Detect that and treat
+// it as a failed transcription rather than dumping garbage into the diary.
+function collapseRepetition(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const n = words.length;
+  for (let phraseLen = 1; phraseLen <= 4; phraseLen++) {
+    for (let start = 0; start + phraseLen * 4 <= n; start++) {
+      const phrase = words.slice(start, start + phraseLen).join(" ");
+      let pos = start + phraseLen;
+      let repeats = 1;
+      while (pos + phraseLen <= n && words.slice(pos, pos + phraseLen).join(" ") === phrase) {
+        repeats++;
+        pos += phraseLen;
+      }
+      if (repeats >= 4) {
+        return words.slice(0, start).join(" ").trim();
+      }
+    }
+  }
+  return text;
+}
+
+function startTranscription(dataUrl) {
+  transcribePromise = (async () => {
+    try {
+      setTranscribeStatus("🤖 음성을 텍스트로 변환 중...");
+      const transcriber = await getAsrPipeline((progress) => {
+        if (progress && progress.status === "progress") {
+          setTranscribeStatus(`🤖 처음 사용 준비 중... (${Math.round(progress.progress || 0)}%)`);
+        }
+      });
+      const result = await transcriber(dataUrl, { language: "korean", task: "transcribe" });
+      const rawText = ((result && result.text) || "").trim();
+      voiceTranscriptDraft = collapseRepetition(rawText);
+
+      if (voiceTranscriptDraft) {
+        setTranscribeStatus(`🎙️ ${voiceTranscriptDraft}`);
+      } else if (rawText) {
+        setTranscribeStatus("텍스트 인식이 불안정했어요. 음성은 정상적으로 저장돼요.", true);
+      } else {
+        setTranscribeStatus("");
+      }
+    } catch (err) {
+      console.error("STT failed:", err);
+      voiceTranscriptDraft = "";
+      setTranscribeStatus("텍스트 변환에 실패했어요. 음성은 정상적으로 저장돼요.", true);
+    }
+  })();
+}
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -392,23 +470,11 @@ function updateVoiceButton() {
   }
 }
 
-function updateVoiceTranscriptPreview() {
-  const p = document.getElementById("voiceTranscriptPreview");
-  if (voiceTranscriptDraft) {
-    p.textContent = `🎙️ ${voiceTranscriptDraft}`;
-    p.classList.remove("hidden");
-  } else {
-    p.textContent = "";
-    p.classList.add("hidden");
-  }
-}
-
 function showVoicePreview(dataUrl) {
   const wrap = document.getElementById("voicePreviewWrap");
   const audio = document.getElementById("voicePreviewAudio");
   audio.src = dataUrl;
   wrap.classList.remove("hidden");
-  updateVoiceTranscriptPreview();
 }
 
 function hideVoicePreview() {
@@ -418,7 +484,8 @@ function hideVoicePreview() {
   audio.load();
   wrap.classList.add("hidden");
   voiceTranscriptDraft = "";
-  updateVoiceTranscriptPreview();
+  transcribePromise = null;
+  setTranscribeStatus("");
 }
 
 async function startRecording() {
@@ -436,7 +503,8 @@ async function startRecording() {
 
   audioChunks = [];
   voiceTranscriptDraft = "";
-  updateVoiceTranscriptPreview();
+  transcribePromise = null;
+  setTranscribeStatus("");
   mediaRecorder = new MediaRecorder(mediaStream);
   mediaRecorder.addEventListener("dataavailable", (e) => {
     if (e.data.size > 0) audioChunks.push(e.data);
@@ -447,29 +515,9 @@ async function startRecording() {
     showVoicePreview(voiceDataUrl);
     mediaStream.getTracks().forEach((track) => track.stop());
     mediaStream = null;
+    startTranscription(voiceDataUrl);
   });
   mediaRecorder.start();
-
-  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SpeechRecognitionCtor) {
-    recognition = new SpeechRecognitionCtor();
-    recognition.lang = "ko-KR";
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.addEventListener("result", (e) => {
-      let chunk = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        chunk += e.results[i][0].transcript;
-      }
-      chunk = chunk.trim();
-      if (chunk) {
-        voiceTranscriptDraft = voiceTranscriptDraft ? `${voiceTranscriptDraft} ${chunk}` : chunk;
-        updateVoiceTranscriptPreview();
-      }
-    });
-    recognition.addEventListener("error", () => {});
-    recognition.start();
-  }
 
   isRecording = true;
   updateVoiceButton();
@@ -478,10 +526,6 @@ async function startRecording() {
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
     mediaRecorder.stop();
-  }
-  if (recognition) {
-    recognition.stop();
-    recognition = null;
   }
   isRecording = false;
   updateVoiceButton();
@@ -855,6 +899,15 @@ async function init() {
     if (!text && selectedPhotos.length === 0 && !voiceDataUrl) {
       alert("사진, 음성, 글 중 하나는 남겨주세요!");
       return;
+    }
+
+    const saveBtn = document.getElementById("saveBtn");
+    if (transcribePromise) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "텍스트 변환 완료 대기 중...";
+      await transcribePromise.catch(() => {});
+      saveBtn.disabled = false;
+      saveBtn.textContent = "저장하기";
     }
 
     await addEntry({

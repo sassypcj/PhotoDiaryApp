@@ -377,6 +377,11 @@ input[type="file"] {
   display: none;
 }
 
+.voice-transcript-preview.error {
+  background: #fbe4de;
+  color: #c0503a;
+}
+
 @keyframes voice-pulse {
   0% { opacity: 1; }
   50% { opacity: 0.55; }
