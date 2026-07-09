@@ -1,4 +1,4 @@
-const CACHE_NAME = "photo-diary-v4";
+const CACHE_NAME = "photo-diary-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
