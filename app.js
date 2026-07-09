@@ -5,6 +5,8 @@ const JPEG_QUALITY = 0.72;
 
 let db;
 let selectedPhotos = []; // array of dataURL strings for the entry being composed
+let viewMode = "list"; // "list" | "calendar"
+let calendarCursor = new Date();
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -24,6 +26,15 @@ function addEntry(entry) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).add(entry);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function putEntry(entry) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(entry);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -164,6 +175,7 @@ let audioChunks = [];
 let recognition = null;
 let isRecording = false;
 let voiceDataUrl = null;
+let voiceTranscriptDraft = "";
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -189,11 +201,23 @@ function updateVoiceButton() {
   }
 }
 
+function updateVoiceTranscriptPreview() {
+  const p = document.getElementById("voiceTranscriptPreview");
+  if (voiceTranscriptDraft) {
+    p.textContent = `🎙️ ${voiceTranscriptDraft}`;
+    p.classList.remove("hidden");
+  } else {
+    p.textContent = "";
+    p.classList.add("hidden");
+  }
+}
+
 function showVoicePreview(dataUrl) {
   const wrap = document.getElementById("voicePreviewWrap");
   const audio = document.getElementById("voicePreviewAudio");
   audio.src = dataUrl;
   wrap.classList.remove("hidden");
+  updateVoiceTranscriptPreview();
 }
 
 function hideVoicePreview() {
@@ -202,6 +226,8 @@ function hideVoicePreview() {
   audio.removeAttribute("src");
   audio.load();
   wrap.classList.add("hidden");
+  voiceTranscriptDraft = "";
+  updateVoiceTranscriptPreview();
 }
 
 async function startRecording() {
@@ -218,6 +244,8 @@ async function startRecording() {
   }
 
   audioChunks = [];
+  voiceTranscriptDraft = "";
+  updateVoiceTranscriptPreview();
   mediaRecorder = new MediaRecorder(mediaStream);
   mediaRecorder.addEventListener("dataavailable", (e) => {
     if (e.data.size > 0) audioChunks.push(e.data);
@@ -238,14 +266,14 @@ async function startRecording() {
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.addEventListener("result", (e) => {
-      let transcript = "";
+      let chunk = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript;
+        chunk += e.results[i][0].transcript;
       }
-      transcript = transcript.trim();
-      if (transcript) {
-        const textarea = document.getElementById("entryText");
-        textarea.value = textarea.value ? `${textarea.value} ${transcript}` : transcript;
+      chunk = chunk.trim();
+      if (chunk) {
+        voiceTranscriptDraft = voiceTranscriptDraft ? `${voiceTranscriptDraft} ${chunk}` : chunk;
+        updateVoiceTranscriptPreview();
       }
     });
     recognition.addEventListener("error", () => {});
@@ -266,6 +294,26 @@ function stopRecording() {
   }
   isRecording = false;
   updateVoiceButton();
+}
+
+// ---- List / calendar views ----
+
+async function refreshViews() {
+  await renderEntryList();
+  if (viewMode === "calendar") {
+    await renderCalendar();
+  }
+}
+
+function switchView(mode) {
+  viewMode = mode;
+  document.getElementById("listView").classList.toggle("hidden", mode !== "list");
+  document.getElementById("calendarView").classList.toggle("hidden", mode !== "calendar");
+  document.getElementById("listTabBtn").classList.toggle("active", mode === "list");
+  document.getElementById("calendarTabBtn").classList.toggle("active", mode === "calendar");
+  if (mode === "calendar") {
+    renderCalendar();
+  }
 }
 
 async function renderEntryList() {
@@ -305,10 +353,100 @@ async function renderEntryList() {
   });
 }
 
+function groupEntriesByDate(entries) {
+  const map = new Map();
+  entries.forEach((entry) => {
+    if (!map.has(entry.date)) map.set(entry.date, []);
+    map.get(entry.date).push(entry);
+  });
+  return map;
+}
+
+async function renderCalendar() {
+  const entries = await getAllEntries();
+  const byDate = groupEntriesByDate(entries);
+
+  const year = calendarCursor.getFullYear();
+  const month = calendarCursor.getMonth();
+  document.getElementById("calendarTitle").textContent = `${year}년 ${month + 1}월`;
+
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayKey = todayStr();
+
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+  for (let i = 0; i < startWeekday; i++) {
+    const empty = document.createElement("div");
+    empty.className = "cal-cell empty";
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateKey = `${year}-${pad(month + 1)}-${pad(day)}`;
+    const dayEntries = byDate.get(dateKey) || [];
+    const cell = document.createElement("div");
+    cell.className =
+      "cal-cell" + (dayEntries.length ? " has-entry" : "") + (dateKey === todayKey ? " today" : "");
+
+    const withPhoto = dayEntries.find((entry) => entry.photos && entry.photos.length > 0);
+    if (withPhoto) {
+      cell.innerHTML = `<span class="cal-day-num">${day}</span><img class="cal-thumb" src="${withPhoto.photos[0]}" />`;
+    } else {
+      cell.innerHTML = `<span class="cal-day-num">${day}</span>${dayEntries.length ? '<span class="cal-dot"></span>' : ""}`;
+    }
+
+    if (dayEntries.length > 0) {
+      cell.addEventListener("click", () => {
+        if (dayEntries.length === 1) {
+          openDetail(dayEntries[0]);
+        } else {
+          openDayList(dateKey, dayEntries);
+        }
+      });
+    }
+    grid.appendChild(cell);
+  }
+}
+
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function openDayList(dateKey, dayEntries) {
+  const modal = document.getElementById("detailModal");
+  const body = document.getElementById("modalBody");
+
+  const itemsHtml = dayEntries
+    .map((entry, idx) => {
+      const thumbHtml =
+        entry.photos && entry.photos.length > 0
+          ? `<img class="thumb" src="${entry.photos[0]}" />`
+          : `<div class="thumb placeholder">📝</div>`;
+      return `<div class="day-list-item" data-idx="${idx}">
+        ${thumbHtml}
+        <div class="snippet">${escapeHtml(entry.text || "(내용 없음)")}</div>
+      </div>`;
+    })
+    .join("");
+
+  body.innerHTML = `
+    <div class="modal-body-date">${formatDate(dateKey)}</div>
+    <div class="day-list">${itemsHtml}</div>
+  `;
+
+  document.getElementById("modalActions").classList.add("hidden");
+
+  body.querySelectorAll(".day-list-item").forEach((el) => {
+    el.addEventListener("click", () => openDetail(dayEntries[Number(el.dataset.idx)]));
+  });
+
+  modal.classList.remove("hidden");
 }
 
 function openDetail(entry) {
@@ -323,23 +461,147 @@ function openDetail(entry) {
     ? `<div class="modal-body-voice"><audio controls src="${entry.voiceNote}"></audio></div>`
     : "";
 
+  const voiceTranscriptHtml = entry.voiceTranscript
+    ? `<div class="modal-body-voice-text">
+        <div class="voice-text-label">🎙️ 음성을 텍스트로</div>
+        <div class="voice-text-content">${escapeHtml(entry.voiceTranscript)}</div>
+      </div>`
+    : "";
+
   body.innerHTML = `
     <div class="modal-body-date">${formatDate(entry.date)}</div>
     <div class="modal-body-photos">${photosHtml}</div>
     ${voiceHtml}
+    ${voiceTranscriptHtml}
     <div class="modal-body-text">${escapeHtml(entry.text || "")}</div>
   `;
 
+  document.getElementById("modalActions").classList.remove("hidden");
   modal.classList.remove("hidden");
+
+  const shareBtn = document.getElementById("shareBtn");
+  shareBtn.onclick = () => shareEntry(entry);
 
   const deleteBtn = document.getElementById("deleteBtn");
   deleteBtn.onclick = async () => {
     if (confirm("이 기록을 삭제할까요?")) {
       await deleteEntry(entry.id);
       modal.classList.add("hidden");
-      renderEntryList();
+      refreshViews();
     }
   };
+}
+
+// ---- Backup / restore / share ----
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function backupAll() {
+  const entries = await getAllEntries();
+  if (entries.length === 0) {
+    alert("백업할 기록이 아직 없어요.");
+    return;
+  }
+  const payload = {
+    app: "photoDiaryDB",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    entries,
+  };
+  downloadJson(`사진일기_백업_${todayStr()}.json`, payload);
+}
+
+async function restoreFromFile(file) {
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    alert("파일을 읽을 수 없어요.");
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    alert("올바른 백업 파일이 아니에요.");
+    return;
+  }
+
+  const entries = Array.isArray(payload) ? payload : payload.entries;
+  if (!Array.isArray(entries)) {
+    alert("올바른 백업 파일이 아니에요.");
+    return;
+  }
+
+  if (!confirm(`${entries.length}개의 기록을 복원할까요? 같은 날짜/id의 기록은 덮어써질 수 있어요.`)) {
+    return;
+  }
+
+  let restored = 0;
+  for (const entry of entries) {
+    if (!entry || typeof entry.id === "undefined" || !entry.date) continue;
+    try {
+      await putEntry(entry);
+      restored++;
+    } catch {
+      // skip malformed entries
+    }
+  }
+
+  await refreshViews();
+  alert(`${restored}개의 기록을 복원했어요.`);
+}
+
+async function dataUrlToFile(dataUrl, filename) {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || "application/octet-stream" });
+}
+
+async function shareEntry(entry) {
+  if (!navigator.share) {
+    alert("이 브라우저/기기에서는 공유 기능을 지원하지 않아요. 대신 백업 파일로 저장해보세요.");
+    return;
+  }
+
+  const shareData = {
+    title: "오늘의 사진 일기",
+    text: `${formatDate(entry.date)}\n\n${entry.text || ""}${
+      entry.voiceTranscript ? `\n\n🎙️ ${entry.voiceTranscript}` : ""
+    }`,
+  };
+
+  try {
+    const files = [];
+    if (entry.photos) {
+      for (let i = 0; i < entry.photos.length; i++) {
+        files.push(await dataUrlToFile(entry.photos[i], `photo-${i + 1}.jpg`));
+      }
+    }
+    if (entry.voiceNote) {
+      const ext = entry.voiceNote.includes("mp4") ? "m4a" : "webm";
+      files.push(await dataUrlToFile(entry.voiceNote, `voice.${ext}`));
+    }
+    if (files.length > 0 && navigator.canShare && navigator.canShare({ files })) {
+      shareData.files = files;
+    }
+    await navigator.share(shareData);
+  } catch (err) {
+    if (err && err.name !== "AbortError") {
+      alert("공유 중 문제가 발생했어요.");
+    }
+  }
 }
 
 async function init() {
@@ -348,7 +610,7 @@ async function init() {
   db = await openDB();
   document.getElementById("entryDate").value = todayStr();
   updateDateDisplay();
-  renderEntryList();
+  refreshViews();
 
   document.getElementById("entryDate").addEventListener("change", updateDateDisplay);
 
@@ -404,6 +666,7 @@ async function init() {
       text,
       photos: selectedPhotos,
       voiceNote: voiceDataUrl,
+      voiceTranscript: voiceTranscriptDraft || null,
     });
 
     selectedPhotos = [];
@@ -412,7 +675,7 @@ async function init() {
     document.getElementById("photoInput").value = "";
     hideVoicePreview();
     renderPreview();
-    renderEntryList();
+    refreshViews();
   });
 
   document.getElementById("closeModal").addEventListener("click", () => {
@@ -423,6 +686,27 @@ async function init() {
     if (e.target.id === "detailModal") {
       e.currentTarget.classList.add("hidden");
     }
+  });
+
+  document.getElementById("listTabBtn").addEventListener("click", () => switchView("list"));
+  document.getElementById("calendarTabBtn").addEventListener("click", () => switchView("calendar"));
+  document.getElementById("prevMonthBtn").addEventListener("click", () => {
+    calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("nextMonthBtn").addEventListener("click", () => {
+    calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+    renderCalendar();
+  });
+
+  document.getElementById("backupBtn").addEventListener("click", backupAll);
+  document.getElementById("restoreBtn").addEventListener("click", () => {
+    document.getElementById("restoreInput").click();
+  });
+  document.getElementById("restoreInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) await restoreFromFile(file);
+    e.target.value = "";
   });
 }
 

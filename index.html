@@ -16,6 +16,11 @@
 <body>
   <header class="app-header">
     <h1 id="appTitle">📷 오늘의 사진 일기</h1>
+    <div class="header-actions">
+      <button type="button" id="backupBtn" class="header-btn" title="전체 백업">💾 백업</button>
+      <button type="button" id="restoreBtn" class="header-btn" title="백업 파일 복원">📥 복원</button>
+      <input type="file" id="restoreInput" accept="application/json" class="hidden-file-input" />
+    </div>
   </header>
 
   <main>
@@ -36,8 +41,11 @@
           <button type="button" id="voiceBtn" class="voice-mic-btn" aria-label="음성으로 기록하기" title="음성으로 기록하기">🎙️</button>
         </div>
         <div class="voice-preview hidden" id="voicePreviewWrap">
-          <audio id="voicePreviewAudio" controls></audio>
-          <button type="button" id="removeVoiceBtn" class="remove-voice-btn" aria-label="음성 삭제">✕</button>
+          <div class="voice-preview-row">
+            <audio id="voicePreviewAudio" controls></audio>
+            <button type="button" id="removeVoiceBtn" class="remove-voice-btn" aria-label="음성 삭제">✕</button>
+          </div>
+          <p class="voice-transcript-preview hidden" id="voiceTranscriptPreview"></p>
         </div>
       </div>
 
@@ -53,9 +61,28 @@
     </section>
 
     <section class="entry-list-section">
-      <h2>지난 기록</h2>
-      <div id="entryList" class="entry-list"></div>
-      <p id="emptyMsg" class="empty-msg">아직 기록이 없어요. 첫 일기를 남겨보세요!</p>
+      <div class="view-toggle">
+        <button type="button" id="listTabBtn" class="view-tab active">목록</button>
+        <button type="button" id="calendarTabBtn" class="view-tab">달력</button>
+      </div>
+
+      <div id="listView">
+        <h2>지난 기록</h2>
+        <div id="entryList" class="entry-list"></div>
+        <p id="emptyMsg" class="empty-msg">아직 기록이 없어요. 첫 일기를 남겨보세요!</p>
+      </div>
+
+      <div id="calendarView" class="hidden">
+        <div class="calendar-header">
+          <button type="button" id="prevMonthBtn" class="cal-nav-btn" aria-label="이전 달">‹</button>
+          <div class="calendar-title" id="calendarTitle"></div>
+          <button type="button" id="nextMonthBtn" class="cal-nav-btn" aria-label="다음 달">›</button>
+        </div>
+        <div class="calendar-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
     </section>
   </main>
 
@@ -63,7 +90,10 @@
     <div class="modal-content">
       <button id="closeModal" class="close-btn">&times;</button>
       <div id="modalBody"></div>
-      <button id="deleteBtn" class="delete-btn">삭제</button>
+      <div class="modal-actions" id="modalActions">
+        <button id="shareBtn" class="share-btn">📤 공유하기</button>
+        <button id="deleteBtn" class="delete-btn">삭제</button>
+      </div>
     </div>
   </div>
 
