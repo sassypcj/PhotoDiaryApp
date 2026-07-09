@@ -62,13 +62,12 @@
     </section>
 
     <section class="entry-list-section">
-      <div class="view-toggle">
-        <button type="button" id="listTabBtn" class="view-tab active">목록</button>
-        <button type="button" id="calendarTabBtn" class="view-tab">달력</button>
+      <div class="section-header">
+        <h2>나의 일기장</h2>
+        <button type="button" id="viewToggleBtn" class="view-toggle-btn" title="달력 보기" aria-label="달력 보기"></button>
       </div>
 
       <div id="listView">
-        <h2>지난 기록</h2>
         <div id="entryList" class="entry-list"></div>
         <p id="emptyMsg" class="empty-msg">아직 기록이 없어요. 첫 일기를 남겨보세요!</p>
       </div>

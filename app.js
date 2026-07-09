@@ -319,12 +319,13 @@ function dailyTitle() {
 }
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+  return dateStr;
 }
 
 function formatTime(id) {
-  return new Date(id).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+  const d = new Date(id);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function updateDateDisplay() {
@@ -537,6 +538,11 @@ function stopRecording() {
 
 // ---- List / calendar views ----
 
+const ICON_LIST =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
+const ICON_CALENDAR =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>';
+
 async function refreshViews() {
   await renderEntryList();
   if (viewMode === "calendar") {
@@ -548,9 +554,16 @@ function switchView(mode) {
   viewMode = mode;
   document.getElementById("listView").classList.toggle("hidden", mode !== "list");
   document.getElementById("calendarView").classList.toggle("hidden", mode !== "calendar");
-  document.getElementById("listTabBtn").classList.toggle("active", mode === "list");
-  document.getElementById("calendarTabBtn").classList.toggle("active", mode === "calendar");
-  if (mode === "calendar") {
+
+  const btn = document.getElementById("viewToggleBtn");
+  if (mode === "list") {
+    btn.innerHTML = ICON_CALENDAR;
+    btn.title = "달력 보기";
+    btn.setAttribute("aria-label", "달력 보기");
+  } else {
+    btn.innerHTML = ICON_LIST;
+    btn.title = "목록 보기";
+    btn.setAttribute("aria-label", "목록 보기");
     renderCalendar();
   }
 }
@@ -621,7 +634,7 @@ async function renderCalendar() {
 
   const year = calendarCursor.getFullYear();
   const month = calendarCursor.getMonth();
-  document.getElementById("calendarTitle").textContent = `${year}년 ${month + 1}월`;
+  document.getElementById("calendarTitle").textContent = `${year}-${String(month + 1).padStart(2, "0")}`;
 
   const firstDay = new Date(year, month, 1);
   const startWeekday = firstDay.getDay();
@@ -865,6 +878,7 @@ async function init() {
   document.getElementById("entryDate").value = todayStr();
   updateDateDisplay();
   updateLockButtonLabel();
+  document.getElementById("viewToggleBtn").innerHTML = ICON_CALENDAR;
 
   if (getLockHash()) {
     openLockScreen("unlock");
@@ -957,8 +971,9 @@ async function init() {
     }
   });
 
-  document.getElementById("listTabBtn").addEventListener("click", () => switchView("list"));
-  document.getElementById("calendarTabBtn").addEventListener("click", () => switchView("calendar"));
+  document.getElementById("viewToggleBtn").addEventListener("click", () => {
+    switchView(viewMode === "list" ? "calendar" : "list");
+  });
   document.getElementById("prevMonthBtn").addEventListener("click", () => {
     calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
     renderCalendar();
