@@ -358,6 +358,61 @@ input[type="file"] {
   animation: voice-pulse 1.2s infinite;
 }
 
+.emoji-toggle-btn {
+  position: absolute;
+  top: 8px;
+  right: 44px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #fbeee7;
+  color: var(--accent-dark);
+  font-size: 0.95rem;
+  line-height: 30px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.emoji-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.emoji-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px;
+  background: #fffefd;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.emoji-panel.hidden {
+  display: none;
+}
+
+.emoji-opt {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.emoji-opt:active {
+  background: var(--bg);
+}
+
 .voice-preview {
   display: flex;
   flex-direction: column;

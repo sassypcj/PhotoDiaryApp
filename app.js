@@ -962,6 +962,27 @@ async function init() {
     }
   });
 
+  document.getElementById("emojiBtn").addEventListener("click", () => {
+    const panel = document.getElementById("emojiPanel");
+    const btn = document.getElementById("emojiBtn");
+    const isOpen = !panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", isOpen);
+    btn.classList.toggle("active", !isOpen);
+  });
+
+  document.querySelectorAll("#emojiPanel .emoji-opt").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const textarea = document.getElementById("entryText");
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      const emoji = btn.dataset.emoji;
+      textarea.value = textarea.value.slice(0, start) + emoji + textarea.value.slice(end);
+      const cursor = start + emoji.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  });
+
   document.getElementById("removeVoiceBtn").addEventListener("click", () => {
     voiceDataUrl = null;
     hideVoicePreview();
@@ -1019,6 +1040,8 @@ async function init() {
     document.getElementById("entryText").value = "";
     document.getElementById("photoInput").value = "";
     document.querySelectorAll("#weatherPicker .weather-opt.selected").forEach((btn) => btn.classList.remove("selected"));
+    document.getElementById("emojiPanel").classList.add("hidden");
+    document.getElementById("emojiBtn").classList.remove("active");
     hideVoicePreview();
     renderPreview();
     refreshViews();
