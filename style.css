@@ -31,11 +31,14 @@ body {
   margin: 0;
 }
 
-.header-actions {
+.app-footer {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  max-width: 480px;
+  margin: 8px auto 32px;
+  padding: 0 16px;
 }
 
 .header-btn {
@@ -611,6 +614,10 @@ input[type="file"] {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
 }
 
 .date-group {

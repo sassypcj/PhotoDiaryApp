@@ -310,13 +310,58 @@ const DAILY_TITLES = [
   "📔 오늘의 일기, 시작해볼까요?",
 ];
 
-function dailyTitle() {
-  const seed = todayStr();
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+function hashSeed(str) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
-  return DAILY_TITLES[hash % DAILY_TITLES.length];
+  return hash >>> 0;
+}
+
+function dailyTitle() {
+  return DAILY_TITLES[hashSeed(todayStr()) % DAILY_TITLES.length];
+}
+
+// Pastel palette taken from a sticker-sheet reference image, spanning
+// purple -> pink -> red -> orange -> yellow -> green -> teal -> blue.
+const DAILY_ACCENT_COLORS = [
+  "#9B8AC4", // 보라
+  "#B9A6DE", // 라벤더
+  "#D68FB0", // 모브 핑크
+  "#E06C8E", // 마젠타
+  "#E2637A", // 코랄 레드
+  "#E8927C", // 살몬
+  "#E8A15C", // 오렌지
+  "#D9A441", // 머스타드
+  "#A8A45C", // 올리브
+  "#8FB08A", // 세이지 그린
+  "#7CC2AE", // 민트
+  "#5FA8A0", // 틸
+  "#7FB3D9", // 스카이 블루
+  "#8C93C7", // 페리윙클
+];
+
+function dailyAccentColor() {
+  return DAILY_ACCENT_COLORS[hashSeed(`${todayStr()}-color`) % DAILY_ACCENT_COLORS.length];
+}
+
+function darkenHex(hex, factor = 0.82) {
+  const n = parseInt(hex.slice(1), 16);
+  const clamp = (c) => Math.max(0, Math.min(255, Math.round(c)));
+  const r = clamp(((n >> 16) & 255) * factor);
+  const g = clamp(((n >> 8) & 255) * factor);
+  const b = clamp((n & 255) * factor);
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function applyDailyAccentColor() {
+  const accent = dailyAccentColor();
+  const accentDark = darkenHex(accent);
+  document.documentElement.style.setProperty("--accent", accent);
+  document.documentElement.style.setProperty("--accent-dark", accentDark);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = accent;
 }
 
 function formatDate(dateStr) {
@@ -874,6 +919,7 @@ async function shareEntry(entry) {
 
 async function init() {
   document.getElementById("appTitle").textContent = dailyTitle();
+  applyDailyAccentColor();
 
   db = await openDB();
   document.getElementById("entryDate").value = todayStr();

@@ -16,12 +16,6 @@
 <body>
   <header class="app-header">
     <h1 id="appTitle">📷 오늘 하루,</h1>
-    <div class="header-actions">
-      <button type="button" id="backupBtn" class="header-btn" title="전체 백업">💾 백업</button>
-      <button type="button" id="restoreBtn" class="header-btn" title="백업 파일 복원">📥 복원</button>
-      <button type="button" id="lockManageBtn" class="header-btn" title="잠금 설정">🔒 잠금 설정</button>
-      <input type="file" id="restoreInput" accept="application/json" class="hidden-file-input" />
-    </div>
   </header>
 
   <main>
@@ -98,6 +92,13 @@
       </div>
     </section>
   </main>
+
+  <footer class="app-footer">
+    <button type="button" id="backupBtn" class="header-btn" title="전체 백업">💾 백업</button>
+    <button type="button" id="restoreBtn" class="header-btn" title="백업 파일 복원">📥 복원</button>
+    <button type="button" id="lockManageBtn" class="header-btn" title="잠금 설정">🔒 잠금 설정</button>
+    <input type="file" id="restoreInput" accept="application/json" class="hidden-file-input" />
+  </footer>
 
   <div id="detailModal" class="modal hidden">
     <div class="modal-content">
