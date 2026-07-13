@@ -319,6 +319,12 @@ function hashSeed(str) {
   return hash >>> 0;
 }
 
+const NO_PHOTO_FACES = ["( ˙_˙ )", "'_'", "^0^*", "^♡^", "*^^*", "♡"];
+
+function noPhotoFace(entry) {
+  return NO_PHOTO_FACES[hashSeed(String(entry.id)) % NO_PHOTO_FACES.length];
+}
+
 function dailyTitle() {
   return DAILY_TITLES[hashSeed(todayStr()) % DAILY_TITLES.length];
 }
@@ -647,7 +653,7 @@ async function renderEntryList() {
       if (entry.photos && entry.photos.length > 0) {
         thumbHtml = `<img class="thumb" src="${entry.photos[0]}" />`;
       } else {
-        thumbHtml = `<div class="thumb placeholder">📝</div>`;
+        thumbHtml = `<div class="thumb placeholder">${noPhotoFace(entry)}</div>`;
       }
 
       card.innerHTML = `
