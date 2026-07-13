@@ -247,6 +247,32 @@ input[type="file"] {
   white-space: nowrap;
 }
 
+.weather-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weather-opt {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fffefd;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.weather-opt.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
 .textarea-wrap {
   position: relative;
 }

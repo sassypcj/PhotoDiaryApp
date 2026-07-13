@@ -5,6 +5,7 @@ const JPEG_QUALITY = 0.72;
 
 let db;
 let selectedPhotos = []; // array of dataURL strings for the entry being composed
+let selectedWeather = null;
 let viewMode = "list"; // "list" | "calendar"
 let calendarCursor = new Date();
 
@@ -607,7 +608,7 @@ async function renderEntryList() {
       card.innerHTML = `
         ${thumbHtml}
         <div class="info">
-          <div class="time">${formatTime(entry.id)}</div>
+          <div class="time">${formatTime(entry.id)}${entry.weather ? ` ${entry.weather}` : ""}</div>
           <div class="snippet">${escapeHtml(entry.text || "(내용 없음)")}</div>
         </div>
       `;
@@ -736,7 +737,7 @@ function openDetail(entry) {
     : "";
 
   body.innerHTML = `
-    <div class="modal-body-date">${formatDate(entry.date)}</div>
+    <div class="modal-body-date">${formatDate(entry.date)}${entry.weather ? ` ${entry.weather}` : ""}</div>
     <div class="modal-body-photos">${photosHtml}</div>
     ${voiceHtml}
     ${voiceTranscriptHtml}
@@ -920,6 +921,19 @@ async function init() {
     hideVoicePreview();
   });
 
+  document.querySelectorAll("#weatherPicker .weather-opt").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const isSelected = btn.classList.contains("selected");
+      document.querySelectorAll("#weatherPicker .weather-opt.selected").forEach((el) => el.classList.remove("selected"));
+      if (isSelected) {
+        selectedWeather = null;
+      } else {
+        btn.classList.add("selected");
+        selectedWeather = btn.dataset.weather;
+      }
+    });
+  });
+
   document.getElementById("saveBtn").addEventListener("click", async () => {
     const date = document.getElementById("entryDate").value || todayStr();
     const text = document.getElementById("entryText").value.trim();
@@ -950,12 +964,15 @@ async function init() {
       photos: selectedPhotos,
       voiceNote: voiceDataUrl,
       voiceTranscript: voiceTranscriptDraft || null,
+      weather: selectedWeather,
     });
 
     selectedPhotos = [];
     voiceDataUrl = null;
+    selectedWeather = null;
     document.getElementById("entryText").value = "";
     document.getElementById("photoInput").value = "";
+    document.querySelectorAll("#weatherPicker .weather-opt.selected").forEach((btn) => btn.classList.remove("selected"));
     hideVoicePreview();
     renderPreview();
     refreshViews();
