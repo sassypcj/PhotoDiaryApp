@@ -18,10 +18,14 @@
       "Bash(node \"C:\\\\Users\\\\stella\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--workspace-PhotoDiaryApp\\\\40db67eb-fb21-4837-b60c-8d0d8c2c3311\\\\scratchpad\\\\serve.js\" \"c:\\\\workspace\\\\PhotoDiaryApp\" 8792)",
       "Bash(curl -s https://api.github.com/repos/sassypcj/PhotoDiaryApp)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);console.log\\('private:',j.private,'| default_branch:',j.default_branch,'| ssh_url:',j.ssh_url\\)}catch\\(e\\){console.log\\(d\\)}}\\)\")",
-      "Bash(node --check app.js)"
+      "Bash(node --check app.js)",
+      "Bash(tail -c 400 \"C:\\\\Users\\\\stella\\\\node_modules\\\\@xenova\\\\transformers\\\\dist\\\\transformers.min.js\")",
+      "Read(//c/Users/stella/node_modules/@xenova/transformers/dist/**)",
+      "Bash(mkdir -p \"c:\\\\workspace\\\\PhotoDiaryApp\\\\vendor\" && cp \"C:\\\\Users\\\\stella\\\\node_modules\\\\@xenova\\\\transformers\\\\dist\\\\transformers.min.js\" \"c:\\\\workspace\\\\PhotoDiaryApp\\\\vendor\\\\transformers.min.js\" && ls -la \"c:\\\\workspace\\\\PhotoDiaryApp\\\\vendor\")"
     ],
     "additionalDirectories": [
-      "c:\\workspace\\.github\\workflows"
+      "c:\\workspace\\.github\\workflows",
+      "C:\\Users\\stella\\node_modules\\@xenova\\transformers\\dist"
     ]
   }
 }
